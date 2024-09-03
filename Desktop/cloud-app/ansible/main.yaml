@@ -12,7 +12,7 @@
       include_role:
         name: prometheusGrafana
 
-- host: prod
+- hosts: prod
   become: true
   tasks:
     - name: Configure prod environment
@@ -20,7 +20,7 @@
         name: prod
 
 
-- host: appDb
+- hosts: appDb
   become: true
   tasks:
     - name: Configure dev environment
