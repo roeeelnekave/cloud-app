@@ -1,21 +1,21 @@
 prometheusGrafana:
   hosts:
     44.198.185.219:
-      ansible_user: azureadmin
+      ansible_user: ubuntu
       ansible_connection: ssh
 jenkins:
   hosts:
     34.231.225.144:
-      ansible_user: azureadmin
+      ansible_user: ubuntu
       ansible_connection: ssh
 appDb:
   hosts:
     35.175.108.7:
-      ansible_user: azureadmin
+      ansible_user: ubuntu
       ansible_connection: ssh
 
 prod:
   hosts:
     3.239.123.51:
-      ansible_user: azureadmin
+      ansible_user: ubuntu
       ansible_connection: ssh
