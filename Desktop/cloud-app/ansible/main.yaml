@@ -1,0 +1,28 @@
+- hosts: jenkins 
+  become: true
+  tasks: 
+    - name: install jenkins
+      include_role:
+        name: jenkins
+
+- hosts: prometheusGrafana
+  become: true
+  tasks: 
+    - name: install promethues and grafana 
+      include_role:
+        name: prometheusGrafana
+
+- host: prod
+  become: true
+  tasks:
+    - name: Configure prod environment
+      include_role:
+        name: prod
+
+
+- host: appDb
+  become: true
+  tasks:
+    - name: Configure dev environment
+      include_role:
+        name: cloud-app

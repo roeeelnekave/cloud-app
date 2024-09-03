@@ -1,0 +1,29 @@
+- name: Update apt repo and cache  
+  apt: 
+    update_cache: yes
+    force_apt_get: yes
+    cache_valid_time: 3600 
+
+
+- name: Install npm curl
+  apt:
+    name: curl
+    state: present
+  become: true
+
+- name: Download NodeSource setup script
+  get_url:
+    url: https://deb.nodesource.com/setup_20.x
+    dest: /tmp/nodesource_setup.sh
+    mode: '0755'
+  become: true 
+
+- name: Run NodeSource setup script
+  command: bash /tmp/nodesource_setup.sh
+  become: true
+  
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
+  become: true

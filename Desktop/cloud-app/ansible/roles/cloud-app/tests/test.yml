@@ -1,0 +1,59 @@
+---
+- name: Install Node.js and npm
+  hosts: appDb
+  become: true
+  tasks:
+    - name: Update apt repo and cache
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
+
+    - name: Install Node.js and npm
+      apt:
+        name:
+          - nodejs
+          - npm
+
+- name: Create a new Linux user
+  hosts: appDb
+  become: true
+  tasks:
+    - name: Create Linux user "arun"
+      ansible.builtin.user:
+        name: arun
+        comment: arun admin
+        group: sudo
+
+- name: Deploy Node.js app
+  hosts: appDb
+  become: true
+  become_user: arun
+  tasks:
+    - name: Copy Node.js app to the server
+      ansible.builtin.copy:
+        src: /Users/roeeelnekave/Desktop/cloud-app/node-rest-api
+        dest: /home/arun/node-rest-api
+        owner: arun
+        group: arun
+        mode: '0755'
+    
+    - name: Install dependencies with npm
+      npm:
+        path: /home/arun/node-rest-api
+        state: present
+    
+    - name: Start the Node.js application with pm2
+      npm:
+        name: pm2
+        global: yes
+    
+    - name: Start the application using pm2
+      command: pm2 start /home/arun/node-rest-api/app.js --name "node-app"
+    
+    - name: Ensure app is running
+      shell: pm2 list | grep "node-app"
+      register: app_status
+    
+    - debug:
+        msg: "{{ app_status.stdout_lines }}"

@@ -1,0 +1,39 @@
+---
+# tasks file for jenkins
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+  become: true
+  
+- name: Install java
+  ansible.builtin.apt:
+    name: 
+    - openjdk-17-jdk 
+    - openjdk-17-jre
+    state: present
+  become: true
+
+- name: Download Jenkins keyring
+  ansible.builtin.get_url:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    dest: /usr/share/keyrings/jenkins-keyring.asc
+    mode: '0644'
+  become: true
+
+- name: Add Jenkins repository to sources list
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+    state: present
+    filename: jenkins
+  become: true
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+  become: true
+
+- name: Install Jenkins
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+  become: true
