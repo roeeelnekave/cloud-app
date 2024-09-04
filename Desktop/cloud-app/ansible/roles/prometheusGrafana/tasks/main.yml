@@ -91,18 +91,9 @@
     enabled: yes
     state: started
   become: true 
-
-- name: Update Packages
+- name: Update system packages
   apt:
     update_cache: yes
-  tags: packages
-
-- name: Install Packages
-  apt:
-    name: "{{ item }}"
-    state: present
-  loop: "{{ packages }}"
-  tags: packages
 
 - name: Ensure /etc/apt/keyrings/ directory exists
   file:
@@ -111,9 +102,10 @@
     mode: '0755'
   become: true
   tags: create_directory
+
 - name: Check if Grafana GPG key already exists
   stat:
-    path: /etc/apt/trusted.gpg.d/grafana.gpg
+    path: /etc/apt/keyrings/grafana.gpg
   register: grafana_gpg_key_stat
   tags: check_gpg_key
 
@@ -125,7 +117,7 @@
   tags: download_gpg_key
 
 - name: Convert Grafana GPG key to binary format
-  command: gpg --dearmor -o /etc/apt/trusted.gpg.d/grafana.gpg /tmp/grafana.gpg.key
+  command: gpg --dearmor -o /etc/apt/keyrings/grafana.gpg /tmp/grafana.gpg.key
   become: true
   when: not grafana_gpg_key_stat.stat.exists
   tags: convert_gpg_key
@@ -139,7 +131,7 @@
 - name: Add Grafana stable repository
   lineinfile:
     path: /etc/apt/sources.list.d/grafana.list
-    line: 'deb [signed-by=/etc/apt/trusted.gpg.d/grafana.gpg] https://apt.grafana.com stable main'
+    line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main'
     create: yes
   become: true
   tags: add_stable_repo
@@ -147,7 +139,7 @@
 - name: Add Grafana beta repository (optional)
   lineinfile:
     path: /etc/apt/sources.list.d/grafana.list
-    line: 'deb [signed-by=/etc/apt/trusted.gpg.d/grafana.gpg] https://apt.grafana.com beta main'
+    line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com beta main'
     create: yes
   become: true
   tags: add_beta_repo
