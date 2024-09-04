@@ -32,7 +32,7 @@
     remote_src: yes
 
 - name: Move Prometheus binaries
-  ansible.builtin.command: mv /tmp/prometheus/{prometheus,promtool} /usr/local/bin/
+  ansible.builtin.command: mv /tmp/prometheus*/{prometheus,promtool} /usr/local/bin/
   args:
     creates: /usr/local/bin/prometheus
 
@@ -47,7 +47,7 @@
     - promtool
 
 - name: Move Prometheus configuration directories
-  ansible.builtin.command: mv /tmp/prometheus/{consoles,console_libraries,prometheus.yml} /etc/prometheus/
+  ansible.builtin.command: mv /tmp/prometheus*/{consoles,console_libraries,prometheus.yml} /etc/prometheus/
   args:
     creates: /etc/prometheus/prometheus.yml
 
