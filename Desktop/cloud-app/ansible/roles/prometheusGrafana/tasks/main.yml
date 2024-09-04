@@ -24,15 +24,16 @@
   ansible.builtin.get_url:
     url: https://github.com/prometheus/prometheus/releases/download/v2.43.0/prometheus-2.43.0.linux-amd64.tar.gz
     dest: /tmp/prometheus.tar.gz
+    become: true
 
 - name: Extract Prometheus tarball
   ansible.builtin.unarchive:
     src: /tmp/prometheus.tar.gz
     dest: /tmp/
-    remote_src: yes
+    become: true
 
 - name: Move Prometheus binaries
-  ansible.builtin.command: mv /tmp/prometheus-2.43.0.linux-amd64/{prometheus,promtool} /usr/local/bin/
+  ansible.builtin.command: mv /tmp/prometheus/{prometheus,promtool} /usr/local/bin/
   args:
     creates: /usr/local/bin/prometheus
 
@@ -47,7 +48,7 @@
     - promtool
 
 - name: Move Prometheus configuration directories
-  ansible.builtin.command: mv /tmp/prometheus-2.43.0.linux-amd64/{consoles,console_libraries,prometheus.yml} /etc/prometheus/
+  ansible.builtin.command: mv /tmp/prometheus/{consoles,console_libraries,prometheus.yml} /etc/prometheus/
   args:
     creates: /etc/prometheus/prometheus.yml
 
