@@ -129,9 +129,9 @@
   ansible.builtin.get_url:
     url: https://apt.grafana.com/gpg.key
     dest: /tmp/grafana.gpg.key
-    state: present
     mode: '0644'
   tags: download_gpg_key
+
 
 - name: Convert Grafana GPG key to binary format
   command: gpg --dearmor -o /etc/apt/trusted.gpg.d/grafana.gpg /tmp/grafana.gpg.key
