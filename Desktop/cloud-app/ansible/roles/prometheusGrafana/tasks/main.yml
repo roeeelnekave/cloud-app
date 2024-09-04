@@ -33,11 +33,11 @@
 - name: Extract Prometheus
   unarchive:
     src: /tmp/prometheus.tar.gz
-    dest: /tmp/
+    dest: /tmp/prometheus
     remote_src: yes
 
 - name: Move Prometheus binaries
-  command: mv /tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }} "{{ prometheus_install_dir }}/"
+  command: mv /tmp/prometheus/{{ item }} "{{ prometheus_install_dir }}/"
   loop:
     - prometheus
     - promtool
