@@ -92,9 +92,6 @@
     state: started
   become: true 
 
-
----
-
 - name: Update Packages
   apt:
     update_cache: yes
