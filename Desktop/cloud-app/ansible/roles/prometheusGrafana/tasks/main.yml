@@ -111,63 +111,54 @@
     mode: '0755'
   become: true
   tags: create_directory
-
 - name: Check if Grafana GPG key already exists
   stat:
-    path: /etc/apt/keyrings/grafana.gpg.key
+    path: /etc/apt/trusted.gpg.d/grafana.gpg
   register: grafana_gpg_key_stat
   tags: check_gpg_key
 
-- name: Remove existing Grafana GPG key
-  file:
-    path: /etc/apt/keyrings/grafana.gpg.key
-    state: absent
-
-  tags: remove_existing_gpg_key
-  
 - name: Download Grafana GPG key
-  ansible.builtin.get_url:
+  get_url:
     url: https://apt.grafana.com/gpg.key
     dest: /tmp/grafana.gpg.key
     mode: '0644'
   tags: download_gpg_key
 
-
 - name: Convert Grafana GPG key to binary format
   command: gpg --dearmor -o /etc/apt/trusted.gpg.d/grafana.gpg /tmp/grafana.gpg.key
   become: true
-
-
+  when: not grafana_gpg_key_stat.stat.exists
+  tags: convert_gpg_key
 
 - name: Clean up temporary GPG key file
-  ansible.builtin.file:
+  file:
     path: /tmp/grafana.gpg.key
     state: absent
   tags: cleanup_gpg_key
 
 - name: Add Grafana stable repository
-  ansible.builtin.lineinfile:
+  lineinfile:
     path: /etc/apt/sources.list.d/grafana.list
-    line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main'
+    line: 'deb [signed-by=/etc/apt/trusted.gpg.d/grafana.gpg] https://apt.grafana.com stable main'
     create: yes
   become: true
   tags: add_stable_repo
 
 - name: Add Grafana beta repository (optional)
-  ansible.builtin.lineinfile:
+  lineinfile:
     path: /etc/apt/sources.list.d/grafana.list
-    line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com beta main'
+    line: 'deb [signed-by=/etc/apt/trusted.gpg.d/grafana.gpg] https://apt.grafana.com beta main'
     create: yes
   become: true
   tags: add_beta_repo
 
 - name: Update the list of available packages
-  ansible.builtin.apt:
+  apt:
     update_cache: yes
   become: true
   tags: update_package_list
 
-- name: Install grafana
+- name: Install Grafana
   apt:
     name: "{{ item }}"
     state: present
@@ -175,7 +166,7 @@
   tags: grafana
 
 - name: Ensure Grafana server is enabled and started
-  ansible.builtin.systemd:
+  systemd:
     name: grafana-server
     enabled: yes
     state: started
@@ -183,7 +174,7 @@
   tags: grafana_server
 
 - name: Check Grafana server status
-  ansible.builtin.systemd:
+  systemd:
     name: grafana-server
     state: started
   register: grafana_status
@@ -191,44 +182,6 @@
   tags: check_grafana_status
 
 - name: Display Grafana server status
-  ansible.builtin.debug:
+  debug:
     var: grafana_status
   tags: display_grafana_status
-
-# - name: Remove default Nginx configuration
-#   file:
-#     path: /etc/nginx/sites-enabled/default
-#     state: absent
-#   become: true
-#   tags: remove_default_nginx_config
-
-# - name: Deploy Grafana Nginx configuration
-#   template:
-#     src: grafana.conf.j2
-#     dest: /etc/nginx/sites-available/grafana.conf
-
-# - name: Enable Grafana Nginx configuration
-#   file:
-#     src: /etc/nginx/sites-available/grafana.conf
-#     dest: /etc/nginx/sites-enabled/grafana.conf
-#     state: link
-#   become: true
-#   tags: enable_grafana_nginx_config
-
-# - name: Test Nginx configuration
-#   command: nginx -t
-#   become: true
-#   tags: test_nginx_config
-
-# - name: Restart Nginx
-#   service:
-#     name: nginx
-#     state: restarted
-#   become: true
-#   tags: restart_nginx
-
-# - name: Obtain SSL certificates with Certbot
-#   command: certbot --nginx -d {{ domain_name }} --non-interactive --agree-tos --email rijanitesh78@gmail.com
-#   register: certbot_result
-#   ignore_errors: true
-#   become: true
