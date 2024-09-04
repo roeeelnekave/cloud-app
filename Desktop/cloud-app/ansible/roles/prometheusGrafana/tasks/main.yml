@@ -132,10 +132,9 @@
   tags: download_gpg_key
 
 - name: Convert Grafana GPG key to binary format
-  ansible.builtin.command: |
-    gpg --dearmor -o /etc/apt/keyrings/grafana.gpg /tmp/grafana.gpg.key
+  command: gpg --dearmor -o /etc/apt/trusted.gpg.d/grafana.gpg /usr/share/keyrings/grafana-archive-keyring.gpg
   become: true
-  tags: dearmor_gpg_key
+
 
 - name: Clean up temporary GPG key file
   ansible.builtin.file:
