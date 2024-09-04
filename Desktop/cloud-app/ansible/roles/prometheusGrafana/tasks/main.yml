@@ -112,6 +112,19 @@
   become: true
   tags: create_directory
 
+- name: Check if Grafana GPG key already exists
+  stat:
+    path: /etc/apt/keyrings/grafana.gpg.key
+  register: grafana_gpg_key_stat
+  tags: check_gpg_key
+
+- name: Remove existing Grafana GPG key
+  file:
+    path: /etc/apt/keyrings/grafana.gpg.key
+    state: absent
+  when: grafana_gpg_key_stat.stat.exists
+  tags: remove_existing_gpg_key
+  
 - name: Download Grafana GPG key
   ansible.builtin.get_url:
     url: https://apt.grafana.com/gpg.key
