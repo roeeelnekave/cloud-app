@@ -1,9 +1,9 @@
-- hosts: jenkins 
-  become: true
-  tasks: 
-    - name: install jenkins
-      include_role:
-        name: jenkins
+# - hosts: jenkins 
+#   become: true
+#   tasks: 
+#     - name: install jenkins
+#       include_role:
+#         name: jenkins
 
 - hosts: prometheusGrafana
   become: true

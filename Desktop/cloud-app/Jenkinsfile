@@ -1,0 +1,77 @@
+pipeline {
+    agent { label 'dyagent' }
+
+    stages {
+        stage("Run CloudFormation") {
+            steps {
+                script {
+                    def stackName = 'prodApp'
+                    def templateFile = 'cloudformation/main.yaml'
+                    def inventoryFile = 'inventory.yaml'
+
+                    def stackExists = sh(script: "aws cloudformation describe-stacks --stack-name ${stackName} > /dev/null 2>&1", returnStatus: true) == 0
+
+                    if (stackExists) {
+                        sh """
+                        aws cloudformation update-stack --stack-name ${stackName} \
+                            --template-body file://${templateFile} \
+                            --capabilities CAPABILITY_NAMED_IAM
+                        """
+                    } else {
+                        sh """
+                        aws cloudformation create-stack --stack-name ${stackName} \
+                            --template-body file://${templateFile} \
+                            --capabilities CAPABILITY_NAMED_IAM
+                        """
+                    }
+                    
+                    // Wait for the stack to be ready
+                    sh "aws cloudformation wait stack-create-complete --stack-name ${stackName}"
+                }
+            }
+        }
+
+        stage("Update Inventory") {
+            steps {
+                script {
+                    dir('ansible') {
+                        // Get the public IP addresses from the CloudFormation outputs
+                        def appDbPublicIP = sh(script: "aws cloudformation describe-stacks --stack-name ${stackName} --query 'Stacks[0].Outputs[?OutputKey==\\'AppDbInstancePublicIP\\'].OutputValue' --output text", returnStdout: true).trim()
+                        def prometheusGrafanaPublicIP = sh(script: "aws cloudformation describe-stacks --stack-name ${stackName} --query 'Stacks[0].Outputs[?OutputKey==\\'PrometheusGrafanaInstancePublicIP\\'].OutputValue' --output text", returnStdout: true).trim()
+
+                        // Update the Ansible inventory file
+                        writeFile file: inventoryFile, text: """
+prometheusGrafana:
+  hosts:
+    ${prometheusGrafanaPublicIP}:
+      ansible_user: ubuntu
+      ansible_connection: ssh
+jenkins:
+  hosts:
+    34.231.225.144:  # Update with correct IP if needed
+      ansible_user: ubuntu
+      ansible_connection: ssh
+appDb:
+  hosts:
+    ${appDbPublicIP}:
+      ansible_user: ubuntu
+      ansible_connection: ssh
+                        """
+                    }
+                }
+            }
+        }
+
+        stage("Run Ansible") {
+            steps {
+                withCredentials([string(credentialsId: 'ssh-key-agent', variable: 'AWS_KEY')]) {
+                    dir('ansible') {
+                        sh "echo $AWS_KEY > mykey.pem"
+                        sh "chmod 400 mykey.pem"
+                        sh "ansible-playbook -i ${inventoryFile} --private-key mykey.pem main.yaml"
+                    }
+                }
+            }
+        }
+    }
+}
