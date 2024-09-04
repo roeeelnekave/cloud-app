@@ -33,7 +33,7 @@
 - name: Extract Prometheus
   unarchive:
     src: /tmp/prometheus.tar.gz
-    dest: /tmp/prometheus
+    dest: /tmp
     remote_src: yes
 
 - name: Move Prometheus binaries
