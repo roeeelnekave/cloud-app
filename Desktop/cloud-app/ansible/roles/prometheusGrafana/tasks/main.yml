@@ -58,7 +58,7 @@
     state: absent
 
 - name: Move configuration files
-  command: mv /tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }} "{{ prometheus_config_dir }}/"
+  command: mv /tmp/prometheus-2.43.0.linux-amd64/{{ item }} "{{ prometheus_config_dir }}/"
   loop:
     - prometheus.yml
     - consoles
