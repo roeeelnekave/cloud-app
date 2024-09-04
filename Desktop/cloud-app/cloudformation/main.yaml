@@ -148,8 +148,19 @@ Resources:
           ToPort: 22
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
+          FromPort: 9100
+          ToPort: 9100
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9090
+          ToPort: 9090
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - Description: Allow all outbound traffic
@@ -194,19 +205,6 @@ Resources:
       Tags:
         - Key: Name
           Value: prometheusGrafana
-
-  InstanceProd:
-    Type: AWS::EC2::Instance
-    Properties: 
-      ImageId: ami-0e86e20dae9224db8
-      InstanceType: t2.micro
-      KeyName: cloudAppKeyPair
-      SubnetId: !Ref PublicSubnet
-      SecurityGroupIds: 
-        - !Ref InstanceSecurityGroup
-      Tags:
-        - Key: Name
-          Value: prod
 
   InstanceAnsible:
     Type: AWS::EC2::Instance

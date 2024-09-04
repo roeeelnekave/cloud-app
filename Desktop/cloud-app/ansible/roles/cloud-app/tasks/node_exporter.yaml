@@ -1,0 +1,66 @@
+- name: Download Node Exporter binary
+  get_url:
+    url: https://github.com/prometheus/node_exporter/releases/download/v1.0.1/node_exporter-1.0.1.linux-amd64.tar.gz
+    dest: /tmp/node_exporter-1.0.1.linux-amd64.tar.gz
+
+- name: Create Node Exporter group
+  group:
+    name: node_exporter
+    state: present
+
+- name: Create Node Exporter user
+  user:
+    name: node_exporter
+    group: node_exporter
+    shell: /sbin/nologin
+    create_home: no
+
+- name: Create Node Exporter directory
+  file:
+    path: /etc/node_exporter
+    state: directory
+    owner: node_exporter
+    group: node_exporter
+
+- name: Unpack Node Exporter binary
+  unarchive:
+    src: /tmp/node_exporter-1.0.1.linux-amd64.tar.gz
+    dest: /tmp/
+    remote_src: yes
+
+- name: Remove the Node Exporter binary if it exists
+  file:
+    path: /usr/bin/node_exporter
+    state: absent
+
+- name: Install Node Exporter binary
+  copy:
+    src: "/tmp/node_exporter-1.0.1.linux-amd64/node_exporter"
+    dest: /usr/bin/node_exporter
+    owner: node_exporter
+    group: node_exporter
+    mode: '0755'
+  remote_src: yes
+  become: true
+
+- name: Create Node Exporter service file
+  template:
+    src: nodeexporter.service.j2     
+    dest: /usr/lib/systemd/system/node_exporter.service
+    become: true
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Start Node Exporter service
+  systemd:
+    name: node_exporter
+    state: started
+    enabled: yes
+
+- name: Clean up
+  file:
+    path: /tmp/node_exporter-1.0.1.linux-amd64.tar.gz
+    state: absent
+  when: clean_up is defined and clean_up

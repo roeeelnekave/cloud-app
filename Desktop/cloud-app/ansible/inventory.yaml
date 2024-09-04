@@ -13,9 +13,3 @@ appDb:
     35.175.108.7:
       ansible_user: ubuntu
       ansible_connection: ssh
-
-prod:
-  hosts:
-    3.239.123.51:
-      ansible_user: ubuntu
-      ansible_connection: ssh

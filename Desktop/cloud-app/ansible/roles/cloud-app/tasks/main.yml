@@ -27,3 +27,7 @@
     name: nodejs
     state: present
   become: true
+
+- name: Installing the  node exporter and creating the systemd service
+  import_tasks: node_exporter.yaml
+ 
