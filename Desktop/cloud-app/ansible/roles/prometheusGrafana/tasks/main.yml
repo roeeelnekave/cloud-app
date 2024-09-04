@@ -136,13 +136,13 @@
   become: true
   tags: add_stable_repo
 
-- name: Add Grafana beta repository (optional)
-  lineinfile:
-    path: /etc/apt/sources.list.d/grafana.list
-    line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com beta main'
-    create: yes
-  become: true
-  tags: add_beta_repo
+# - name: Add Grafana beta repository (optional)
+#   lineinfile:
+#     path: /etc/apt/sources.list.d/grafana.list
+#     line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com beta main'
+#     create: yes
+#   become: true
+#   tags: add_beta_repo
 
 - name: Update the list of available packages
   apt:
