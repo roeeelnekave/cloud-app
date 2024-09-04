@@ -1,140 +1,222 @@
-- name: Install prerequisites for Grafana
-  ansible.builtin.apt:
-    name:
-      - apt-transport-https
-      - software-properties-common
-      - wget
-    state: present
+---
+- name: Update system packages
+  apt:
     update_cache: yes
-  become: true
 
-- name: Create prometheus group
-  ansible.builtin.group:
-    name: prometheus
+- name: Create a system group for Prometheus
+  group:
+    name: "{{ prometheus_group }}"
     system: yes
 
-- name: Create prometheus user
-  ansible.builtin.user:
-    name: prometheus
-    system: yes
-    group: prometheus
+- name: Create a system user for Prometheus
+  user:
+    name: "{{ prometheus_user }}"
     shell: /sbin/nologin
+    system: yes
+    group: "{{ prometheus_group }}"
 
-- name: Download Prometheus tarball
-  ansible.builtin.get_url:
-    url: https://github.com/prometheus/prometheus/releases/download/v2.43.0/prometheus-2.43.0.linux-amd64.tar.gz
+- name: Create directories for Prometheus
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+  loop:
+    - "{{ prometheus_config_dir }}"
+    - "{{ prometheus_data_dir }}"
+
+- name: Download Prometheus
+  get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
     dest: /tmp/prometheus.tar.gz
 
-- name: Extract Prometheus tarball
-  ansible.builtin.unarchive:
+- name: Extract Prometheus
+  unarchive:
     src: /tmp/prometheus.tar.gz
     dest: /tmp/
     remote_src: yes
 
 - name: Move Prometheus binaries
-  ansible.builtin.command: mv /tmp/prometheus*/{prometheus,promtool} /usr/local/bin/
-  args:
-    creates: /usr/local/bin/prometheus
-
-- name: Change ownership of Prometheus binaries
-  ansible.builtin.file:
-    path: /usr/local/bin/{{ item }}
-    owner: prometheus
-    group: prometheus
-    mode: '0755'
+  command: mv /tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }} "{{ prometheus_install_dir }}/"
   loop:
     - prometheus
     - promtool
 
-- name: Move Prometheus configuration directories
-  ansible.builtin.command: mv /tmp/prometheus*/{consoles,console_libraries,prometheus.yml} /etc/prometheus/
-  args:
-    creates: /etc/prometheus/prometheus.yml
+- name: Remove existing console_libraries directory
+  file:
+    path: "{{ prometheus_config_dir }}/console_libraries"
+    state: absent
+    
+- name: Remove existing console directory
+  file:
+    path: "{{ prometheus_config_dir }}/consoles"
+    state: absent
 
-- name: Change ownership of Prometheus directories
-  ansible.builtin.file:
-    path: /etc/prometheus
-    owner: prometheus
-    group: prometheus
-    recurse: yes
+- name: Remove existing prometheus.yml file
+  file:
+    path: "{{ prometheus_config_dir }}/prometheus.yml"
+    state: absent
+
+- name: Move configuration files
+  command: mv /tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }} "{{ prometheus_config_dir }}/"
+  loop:
+    - prometheus.yml
+    - consoles
+    - console_libraries
+
+
+- name: Set ownership for configuration files
+  file:
+    path: "{{ prometheus_config_dir }}/{{ item }}"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    state: directory
+  loop:
+    - consoles
+    - console_libraries
 
 - name: Create Prometheus systemd service file
-  ansible.builtin.copy:
+  template:
+    src: prometheus.service.j2
     dest: /etc/systemd/system/prometheus.service
-    content: |
-      [Unit]
-      Description=Prometheus
-      Wants=network-online.target
-      After=network-online.target
+  become: true
 
-      [Service]
-      User=prometheus
-      Group=prometheus
-      Type=simple
-      ExecStart=/usr/local/bin/prometheus \
-          --config.file /etc/prometheus/prometheus.yml \
-          --storage.tsdb.path /var/lib/prometheus/ \
-          --web.console.templates=/etc/prometheus/consoles \
-          --web.console.libraries=/etc/prometheus/console_libraries
-
-      [Install]
-      WantedBy=multi-user.target
-
-- name: Reload systemd daemon
-  ansible.builtin.systemd:
-    daemon_reload: yes
+- name: Reload systemd
+  command: systemctl daemon-reload
+  become: true
 
 - name: Enable and start Prometheus service
-  ansible.builtin.systemd:
+  systemd:
     name: prometheus
     enabled: yes
     state: started
+  become: true 
 
-- name: Allow Prometheus port on firewall
-  ansible.builtin.ufw:
-    rule: allow
-    port: 9090
-    proto: tcp
 
-- name: Create directory for Grafana keyrings
-  ansible.builtin.file:
+---
+
+- name: Update Packages
+  apt:
+    update_cache: yes
+  tags: packages
+
+- name: Install Packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ packages }}"
+  tags: packages
+
+- name: Ensure /etc/apt/keyrings/ directory exists
+  file:
     path: /etc/apt/keyrings/
     state: directory
     mode: '0755'
+  become: true
+  tags: create_directory
 
-- name: Download Grafana GPG key and save as dearmored
-  ansible.builtin.command: wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | tee /etc/apt/keyrings/grafana.gpg
-  args:
-    creates: /etc/apt/keyrings/grafana.gpg
+- name: Download Grafana GPG key
+  ansible.builtin.get_url:
+    url: https://apt.grafana.com/gpg.key
+    dest: /tmp/grafana.gpg.key
+  tags: download_gpg_key
 
-- name: Add Grafana repositories
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main"
-    filename: grafana
-    state: present
+- name: Convert Grafana GPG key to binary format
+  ansible.builtin.command: |
+    gpg --dearmor -o /etc/apt/keyrings/grafana.gpg /tmp/grafana.gpg.key
+  become: true
+  tags: dearmor_gpg_key
 
-- name: Add Grafana beta repository
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com beta main"
-    filename: grafana-beta
-    state: present
+- name: Clean up temporary GPG key file
+  ansible.builtin.file:
+    path: /tmp/grafana.gpg.key
+    state: absent
+  tags: cleanup_gpg_key
 
-- name: Update apt cache for Grafana
+- name: Add Grafana stable repository
+  ansible.builtin.lineinfile:
+    path: /etc/apt/sources.list.d/grafana.list
+    line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main'
+    create: yes
+  become: true
+  tags: add_stable_repo
+
+- name: Add Grafana beta repository (optional)
+  ansible.builtin.lineinfile:
+    path: /etc/apt/sources.list.d/grafana.list
+    line: 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com beta main'
+    create: yes
+  become: true
+  tags: add_beta_repo
+
+- name: Update the list of available packages
   ansible.builtin.apt:
     update_cache: yes
+  become: true
+  tags: update_package_list
 
-- name: Install Grafana OSS
-  ansible.builtin.apt:
-    name: grafana
+- name: Install grafana
+  apt:
+    name: "{{ item }}"
     state: present
+  loop: "{{ grafana }}"
+  tags: grafana
 
-- name: Install Grafana Enterprise
-  ansible.builtin.apt:
-    name: grafana-enterprise
-    state: present
-
-- name: Enable and start Grafana service
+- name: Ensure Grafana server is enabled and started
   ansible.builtin.systemd:
     name: grafana-server
     enabled: yes
     state: started
+  become: true
+  tags: grafana_server
+
+- name: Check Grafana server status
+  ansible.builtin.systemd:
+    name: grafana-server
+    state: started
+  register: grafana_status
+  become: true
+  tags: check_grafana_status
+
+- name: Display Grafana server status
+  ansible.builtin.debug:
+    var: grafana_status
+  tags: display_grafana_status
+
+# - name: Remove default Nginx configuration
+#   file:
+#     path: /etc/nginx/sites-enabled/default
+#     state: absent
+#   become: true
+#   tags: remove_default_nginx_config
+
+# - name: Deploy Grafana Nginx configuration
+#   template:
+#     src: grafana.conf.j2
+#     dest: /etc/nginx/sites-available/grafana.conf
+
+# - name: Enable Grafana Nginx configuration
+#   file:
+#     src: /etc/nginx/sites-available/grafana.conf
+#     dest: /etc/nginx/sites-enabled/grafana.conf
+#     state: link
+#   become: true
+#   tags: enable_grafana_nginx_config
+
+# - name: Test Nginx configuration
+#   command: nginx -t
+#   become: true
+#   tags: test_nginx_config
+
+# - name: Restart Nginx
+#   service:
+#     name: nginx
+#     state: restarted
+#   become: true
+#   tags: restart_nginx
+
+# - name: Obtain SSL certificates with Certbot
+#   command: certbot --nginx -d {{ domain_name }} --non-interactive --agree-tos --email rijanitesh78@gmail.com
+#   register: certbot_result
+#   ignore_errors: true
+#   become: true
