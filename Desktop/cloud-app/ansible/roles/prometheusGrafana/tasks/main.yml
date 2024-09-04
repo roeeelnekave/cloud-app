@@ -24,7 +24,6 @@
   ansible.builtin.get_url:
     url: https://github.com/prometheus/prometheus/releases/download/v2.43.0/prometheus-2.43.0.linux-amd64.tar.gz
     dest: /tmp/prometheus.tar.gz
-    become: true
 
 - name: Extract Prometheus tarball
   ansible.builtin.unarchive:
