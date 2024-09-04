@@ -29,7 +29,7 @@
   ansible.builtin.unarchive:
     src: /tmp/prometheus.tar.gz
     dest: /tmp/
-    become: true
+    remote_src: yes
 
 - name: Move Prometheus binaries
   ansible.builtin.command: mv /tmp/prometheus/{prometheus,promtool} /usr/local/bin/
