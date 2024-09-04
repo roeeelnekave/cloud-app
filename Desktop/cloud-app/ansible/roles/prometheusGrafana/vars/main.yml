@@ -1,0 +1,16 @@
+---
+
+packages:
+  - apt-transport-https
+  - software-properties-common
+  - wget
+  - nginx
+  - certbot
+  - python3-certbot-nginx
+
+grafana:
+  - grafana
+  - grafana-enterprise
+
+domain_name: "grafana.example.com"
+email: "example@example.com"
